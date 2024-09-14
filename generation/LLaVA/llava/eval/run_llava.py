@@ -127,11 +127,7 @@ def eval_model(args):
         )
 
     outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-    if args.batch:
-        for i, image_file in enumerate(image_files):
-            print(image_file, outputs[i].strip())
-    else:
-        print(outputs[0].strip())
+    return [i.strip() for i in outputs]
 
 
 if __name__ == "__main__":
