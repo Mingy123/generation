@@ -29,31 +29,7 @@ tokenizer, model, image_processor, context_len = load_pretrained_model(
     model_name=model_name
 )
 
-## Getting the description of each image
-
-in_pdf = "info.pdf"
-doc = fitz.open(in_pdf)
-
-output_folder = "pdf_images"
-if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
-files = []
-for page_num in range(len(doc)):
-    page = doc.load_page(page_num)
-    pix = page.get_pixmap()
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    filename = f"page_{page_num}.png"
-    files.append(output_folder+'/'+filename)
-    output_path = os.path.join(output_folder, filename)
-    img.save(output_path)
-print('pdf output saved to',files)
-
-doc.close()
-
-
-
-
-
+# boilerplate function copied from run_llava.py. Uses the globally defined `model` above.
 def eval_model(images, query, batch=False, temperature=0.5, top_p=None, num_beams=1, max_new_tokens=1024):
     qs = query
     image_token_se = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN
@@ -130,31 +106,34 @@ def eval_model(images, query, batch=False, temperature=0.5, top_p=None, num_beam
 def get_image_info(image_files):
     prompt = "Describe the following image in full detail, including any text in the image."
     return eval_model(image_files, prompt, batch=True)
-    #sep = ','
-    #args = type('Args', (), {
-    #    "model_path": model_path,
-    #    "model_base": None,
-    #    "model_name": get_model_name_from_path(model_path),
-    #    "query": prompt,
-    #    "conv_mode": None,
-    #    "image_file": sep.join(image_files),
-    #    "sep": sep,
-    #    "temperature": 0.5,
-    #    "top_p": None,
-    #    "num_beams": 1,
-    #    "max_new_tokens": 1024,
-    #    "batch": True
-    #})()
-    #result = eval_model(args)
-    #return result
 
 def split_list(lst, n):
     return [lst[i:i + n] for i in range(0, len(lst), n)]
 
+# returns a list of paths e.g. "pdf_images/page_1.png"
+def pdf_to_img(pdf_path):
+    doc = fitz.open(pdf_path)
+    output_folder = "pdf_images"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    files = []
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        filename = f"page_{page_num}.png"
+        files.append(output_folder+'/'+filename)
+        output_path = os.path.join(output_folder, filename)
+        img.save(output_path)
+    doc.close()
+    return files
+
+
+
+files = pdf_to_img("info.pdf")
 runs = split_list(files, 10)
 print("Split into", runs)
 import time
-
 for i in range(len(runs)):
     r = runs[i]
     start = time.time()
