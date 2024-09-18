@@ -1,3 +1,9 @@
+''' Variables to be set:
+    RESOURCE_FILE
+    SECTION_NAMES
+    TARGET_AUDIENCE
+'''
+
 import os
 os.environ["HF_HOME"] = '/mnt/cache'
 os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
@@ -38,7 +44,7 @@ def eval_model(images, query, batch=False, temperature=0.5, top_p=None, num_beam
             qs = re.sub(IMAGE_PLACEHOLDER, image_token_se, qs)
         else:
             qs = re.sub(IMAGE_PLACEHOLDER, DEFAULT_IMAGE_TOKEN, qs)
-    else:
+    elif len(images) > 0:
         if model.config.mm_use_im_start_end:
             qs = image_token_se + "\n" + qs
         else:
@@ -69,11 +75,14 @@ def eval_model(images, query, batch=False, temperature=0.5, top_p=None, num_beam
         out.append(image)
     images = out
     image_sizes = [x.size for x in images]
-    images_tensor = process_images(
-        images,
-        image_processor,
-        model.config
-    ).to(model.device, dtype=torch.float16)
+    if len(images) == 0:
+        images_tensor = None
+    else:
+        images_tensor = process_images(
+            images,
+            image_processor,
+            model.config
+        ).to(model.device, dtype=torch.float16)
 
     input_ids = (
         tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt")
@@ -104,8 +113,14 @@ def eval_model(images, query, batch=False, temperature=0.5, top_p=None, num_beam
 
 
 def get_image_info(image_files):
-    prompt = "Describe the following image in full detail, including any text in the image."
+    prompt = "State important information conveyed in the image, especially factual statements and ideas, including any text. Only present information if it is factual and has educational value on its own. If there is no valueable content, do not reply with anything."
     return eval_model(image_files, prompt, batch=True)
+
+import oai
+def ask_question(text):
+    result = oai.ask_question(text)
+    result = result['choices'][0]['message']['content']
+    return result
 
 def split_list(lst, n):
     return [lst[i:i + n] for i in range(0, len(lst), n)]
@@ -129,14 +144,46 @@ def pdf_to_img(pdf_path):
     return files
 
 
-
-files = pdf_to_img("info.pdf")
+RESOURCE_FILE = "info.pdf"
+files = pdf_to_img(RESOURCE_FILE)
 runs = split_list(files, 10)
 print("Split into", runs)
-import time
+refs = []
 for i in range(len(runs)):
     r = runs[i]
-    start = time.time()
-    print(get_image_info(r))
-    end = time.time()
-    print("Processed", len(r), "in", end-start)
+    result = get_image_info(r)
+    refs += result
+
+information = "\n".join(refs)
+outfile = open("reference.txt", "w")
+outfile.write(information)
+outfile.close()
+
+SECTION_NAMES = ["Header", "Body", "Section 1", "Section 2", "Footnote"]
+TARGET_AUDIENCE = "tertiary institution students with a moderate exposure to drugs"
+PRETEXT = f""" Fill in text for these parts of an infographic poster against the use of drugs : {", ".join(SECTION_NAMES)}.
+Start each section with its title, followed by the content on a new line. Separate each section with 2 newlines.
+For example:
+Header
+Content of the header
+Another line of content
+
+Body
+Content of the body
+End Example.
+
+This will be targeted towards {TARGET_AUDIENCE}
+Below is further information on the topic. Fill in the content using this and your own knowledge.
+\n\n\n"""
+
+content = ask_question(PRETEXT + information)
+
+# parse this into a JSON of text box contents
+output = dict()
+for chunk in content.split("\n\n"):
+    lines = chunk.split("\n")
+    output.update({lines[0] : '\n'.join(lines[1:])})
+import json
+outfile = open("output.json", "w")
+json.dump(output, outfile)
+outfile.close()
