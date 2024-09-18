@@ -35,7 +35,9 @@ def ask_question(text):
       "top_p": 0.95,
       "max_tokens": 4096
     }
+    return req_api(payload)
 
+def req_api(payload):
     ENDPOINT = "https://gpt4-hacx.openai.azure.com/openai/deployments/gpt-maybe/chat/completions?api-version=2024-02-15-preview"
 
     try:

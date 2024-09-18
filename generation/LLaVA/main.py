@@ -187,3 +187,41 @@ import json
 outfile = open("output.json", "w")
 json.dump(output, outfile)
 outfile.close()
+
+
+SD_PROMPT = '''Consider some images to supplement this content used for an infographic.
+Provide a textual description of these images to be used in the infographic.
+Focus on defining features such as the subject, the artistic style et cetera.
+For each image, output one line of text in point form, with its features separated by commas. Strictly only provide the visual description of the images in each line. Do not title these images in any way.
+\n\nContent for the infographic:\n''' + content
+payload = {
+  "messages": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a creative artist who is highly expressive. Follow all instructions carefully and strictly."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": SD_PROMPT
+        }
+      ]
+    }
+  ],
+  "temperature": 0.7,
+  "top_p": 0.95,
+  "max_tokens": 4096
+}
+
+sd_result = oai.req_api(payload)['choices'][0]['message']['content']
+
+outfile = open("sdxl.txt", "w")
+outfile.write(sd_result)
+outfile.close()
