@@ -188,9 +188,6 @@ def main( \
         refs += result
 
     information = "\n".join(refs)
-    outfile = open("reference.txt", "w")
-    outfile.write(information)
-    outfile.close()
 
     content = ask_question(PRETEXT_CONTENT.format(", ".join(section_names), target_audience) + information)
     print(content)
@@ -201,7 +198,7 @@ def main( \
         lines = chunk.split("\n")
         output.update({lines[0] : '\n'.join(lines[1:])})
     import json
-    outfile = open("output.json", "w")
+    outfile = open("content.json", "w")
     json.dump(output, outfile)
     outfile.close()
 
@@ -237,7 +234,9 @@ def main( \
     lines = sd_result.split('\n')
     sd_prompt = []
     for i in lines:
-        sd_prompt.append(re.sub(r'[^a-zA-Z0-9\s,.]', '', i).strip())
+        cleaned = re.sub(r'[^a-zA-Z0-9\s,.]', '', i).strip()
+        if len(cleaned) < 2: continue
+        sd_prompt.append(cleaned)
 
     outfile = open("sdxl.txt", "w")
     outfile.write('\n'.join(sd_prompt))
