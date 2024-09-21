@@ -1,0 +1,60 @@
+{
+    "width": 1050,
+    "height": 1485,
+    "elements": [
+        {
+            "name": "Title",
+            "x": 35,
+            "y": 35,
+            "width": 980,
+            "height": 200,
+            "contentType": "text",
+            "content": "Say NO to Drugs: Protect Your Future!"
+        },
+        {
+            "name": "Content 1",
+            "x": 35,
+            "y": 270,
+            "width": 465,
+            "height": 810,
+            "contentType": "text",
+            "content": "Drugs can have serious consequences on your physical and mental health. They can lead to addiction, damage your brain, and cause mental health issues like depression and anxiety. Drug use can also affect your academic performance and relationships with family and friends."
+        },
+        {
+            "name": "Content 1 Image",
+            "x": 35,
+            "y": 1115,
+            "width": 465,
+            "height": 335,
+            "contentType": "image",
+            "content": ""
+        },
+        {
+            "name": "Content 2 Image",
+            "x": 550,
+            "y": 270,
+            "width": 465,
+            "height": 455,
+            "contentType": "image",
+            "content": ""
+        },
+        {
+            "name": "Content 2",
+            "x": 550,
+            "y": 760,
+            "width": 465,
+            "height": 550,
+            "contentType": "text",
+            "content": "It's important to know the signs of drug abuse, such as sudden changes in behavior, poor academic performance, and withdrawal from social activities. If you or someone you know is struggling with drug abuse, seek help immediately. There are resources and support available to guide you through recovery."
+        },
+        {
+            "name": "Footnote",
+            "x": 550,
+            "y": 1345,
+            "width": 465,
+            "height": 105,
+            "contentType": "text",
+            "content": ""
+        }
+    ]
+}

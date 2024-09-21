@@ -18,7 +18,10 @@ from llava.constants import (
 )
 import fitz
 import re
+import json
+import base64
 from PIL import Image
+from io import BytesIO
 from diffusers import DiffusionPipeline
 
 # init models
@@ -146,7 +149,7 @@ def pdf_to_img(pdf_path):
 
 
 # ", ".join(SECTION_NAMES)
-# TARGET_AUDIENCE
+# target_audience
 PRETEXT_CONTENT = """ Fill in text for these parts of an infographic poster against the use of drugs : {}.
 Start each section with its title, followed by the content on a new line. Separate each section with 2 newlines.
 
@@ -174,10 +177,19 @@ For each image, output one line of text in point form, with its features separat
 \n\nContent for the infographic:\n'''
 
 def main( \
+        template_path='poster_templates/poster1.json',
         resource_file='info.pdf', \
-        section_names=["Header", "Body", "Section 1", "Section 2", "Footnote"], \
-        target_audience="early teenagers with little to no experience with narcotics", \
-        num_images=1):
+        target_audience="early teenagers with little to no experience with narcotics"):
+
+    infile = open(template_path, 'r')
+    template = json.load(infile)
+    infile.close()
+    section_names = [item['name'] for item in template['elements'] if item['contentType'] == "text"]
+    print("Got section names", section_names)
+    num_images = 0
+    for item in template['elements']:
+        if item['contentType'] == 'image': num_images += 1
+
     files = pdf_to_img(resource_file)
     runs = split_list(files, 10)
     print("Split into", runs)
@@ -186,24 +198,20 @@ def main( \
         r = runs[i]
         result = get_image_info(r)
         refs += result
-
     information = "\n".join(refs)
 
     content = ask_question(PRETEXT_CONTENT.format(", ".join(section_names), target_audience) + information)
-    print(content)
 
     # parse this into a JSON of text box contents
-    output = dict()
     for chunk in content.split("\n\n"):
         lines = chunk.split("\n")
-        output.update({lines[0] : '\n'.join(lines[1:])})
-    import json
-    outfile = open("content.json", "w")
-    json.dump(output, outfile)
-    outfile.close()
+        chunk_name = lines[0]
+        chunk_content = '\n'.join(lines[1:])
+        for item in template['elements']:
+            if item['name'].lower() == chunk_name.lower():
+                item['content'] = chunk_content
 
     p = SD_PROMPT.format(num_images) 
-    print(p)
     payload = {
       "messages": [
         {
@@ -230,24 +238,46 @@ def main( \
       "max_tokens": 4096
     }
 
-    sd_result = oai.req_api(payload)['choices'][0]['message']['content']
-    lines = sd_result.split('\n')
     sd_prompt = []
-    for i in lines:
-        cleaned = re.sub(r'[^a-zA-Z0-9\s,.]', '', i).strip()
-        if len(cleaned) < 2: continue
-        sd_prompt.append(cleaned)
+    while len(sd_prompt) != num_images:
+        sd_prompt = []
+        sd_result = oai.req_api(payload)['choices'][0]['message']['content']
+        lines = sd_result.split('\n')
+        for i in lines:
+            cleaned = re.sub(r'[^a-zA-Z0-9\s,.]', '', i).strip()
+            if len(cleaned) < 2: continue
+            sd_prompt.append(cleaned)
 
-    outfile = open("sdxl.txt", "w")
-    outfile.write('\n'.join(sd_prompt))
+
+    dimensions = []
+    for item in template['elements']:
+        if item['contentType'] == 'image':
+            w = 8*round(item['width']/8)
+            h = 8*round(item['height']/8)
+            while w < 512 or h < 512:
+                w *= 2
+                h *= 2
+            dimensions.append((w,h))
+    images = []
+    for i in range(num_images):
+        image = pipe(prompt=sd_prompt[i], width=dimensions[i][0], height=dimensions[i][1]).images[0]
+        buf = BytesIO()
+        image.save(buf, format="JPEG")
+        img_str = base64.b64encode(buf.getvalue()).decode('utf-8')
+        images.append("data:image/jpeg;base64," + img_str)
+    print("Generated images total length =", sum([len(i) for i in images]))
+
+    images_iter = iter(images)
+    for item in template['elements']:
+        if item['contentType'] == 'image':
+            item['content'] = next(images_iter)
+
+    outfile = open("final.json", "w")
+    json.dump(template, outfile)
     outfile.close()
 
-
-    # if using torch < 2.0
-    # pipe.enable_xformers_memory_efficient_attention()
-
-    for i in range(min(len(sd_prompt), num_images)):
-        image = pipe(prompt=sd_prompt[i]).images[0]
-        image.save(f"out_{i}.png")
-
-main(num_images=3)
+import time
+start = time.time()
+main(target_audience='young adults with plentiful exposure to drugs and drug abuse')
+end = time.time()
+print(end-start)
