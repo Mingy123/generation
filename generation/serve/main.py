@@ -20,9 +20,13 @@ import fitz
 import re
 import json
 import base64
+import time
 from PIL import Image
 from io import BytesIO
 from diffusers import DiffusionPipeline
+
+import oai
+import draw
 
 # init models
 os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
@@ -120,7 +124,6 @@ def get_image_info(image_files):
     prompt = "State important information conveyed in the image, especially factual statements and ideas, including any text. Only present information if it is factual and has educational value on its own. If there is no valueable content, do not reply with anything."
     return eval_model(image_files, prompt, batch=True)
 
-import oai
 def ask_question(text):
     result = oai.ask_question(text)
     result = result['choices'][0]['message']['content']
@@ -178,7 +181,7 @@ For each image, output one line of text in point form, with its features separat
 
 def main( \
         template_path='poster_templates/poster1.json',
-        resource_file='info.pdf', \
+        resource_file='references/info.pdf', \
         target_audience="early teenagers with little to no experience with narcotics"):
 
     infile = open(template_path, 'r')
@@ -272,11 +275,16 @@ def main( \
         if item['contentType'] == 'image':
             item['content'] = next(images_iter)
 
+    final_image = draw.main(template)
+    buf = BytesIO()
+    final_image.save(buf, format="JPEG")
+    img_str = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
+    template['renderedImage'] = img_str
+
     outfile = open("final.json", "w")
     json.dump(template, outfile)
     outfile.close()
 
-import time
 start = time.time()
 main(target_audience='young adults with plentiful exposure to drugs and drug abuse')
 end = time.time()

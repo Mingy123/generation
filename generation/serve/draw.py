@@ -1,9 +1,10 @@
 import json
 import base64
+import os
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
-FONT_PATH = 'arial.ttf'
+FONT_PATH = 'fonts/Segoe UI.ttf'
 
 def find_max_font_size(text, width, height, draw):
     font_size = 1
@@ -32,12 +33,9 @@ def wrap_text(text, width, font, draw):
     lines.append(current_line)
     return lines
 
+# template: dict
 # returns a PIL image
-def main(json_path):
-    infile = open("final.json", 'r')
-    template = json.load(infile)
-    infile.close()
-
+def main(template):
     width, height = template['width'], template['height']
     canvas = Image.new('RGB', (width, height), 'white')
 
@@ -65,7 +63,6 @@ def main(json_path):
         else:
             assert item['contentType'] == 'image'
             data = item['content'].removeprefix("data:image/jpeg;base64,")
-            print(data[:5], data[-5:])
             image = Image.open(BytesIO(base64.b64decode( data )))
             image = image.resize((item['width'], item['height']))
             canvas.paste(image, (item['x'], item['y']))
@@ -77,6 +74,11 @@ if __name__ == '__main__':
     if not os.path.exists('final.json'):
         print("final.json does not exist. exiting.")
         exit()
-    image = main("final.json")
+    infile = open("final.json", 'r')
+    template = json.load(infile)
+    infile.close()
+    image = main(template)
+    buf = BytesIO()
+    image.save(buf, format="JPEG")
     img_str = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
     print("generated image of b64 length", len(img_str))
