@@ -32,42 +32,51 @@ def wrap_text(text, width, font, draw):
     lines.append(current_line)
     return lines
 
-infile = open("final.json", 'r')
-template = json.load(infile)
-infile.close()
+# returns a PIL image
+def main(json_path):
+    infile = open("final.json", 'r')
+    template = json.load(infile)
+    infile.close()
 
-width, height = template['width'], template['height']
-canvas = Image.new('RGB', (width, height), 'white')
+    width, height = template['width'], template['height']
+    canvas = Image.new('RGB', (width, height), 'white')
 
-draw = ImageDraw.Draw(canvas)
+    draw = ImageDraw.Draw(canvas)
 
-for item in template['elements']:
-    x0, y0 = item['x'], item['y']
-    x1, y1 = x0 + item['width'], y0 + item['height']
-    draw.rectangle([(x0, y0), (x1, y1)], outline="black", width=3)
+    for item in template['elements']:
+        x0, y0 = item['x'], item['y']
+        x1, y1 = x0 + item['width'], y0 + item['height']
+        draw.rectangle([(x0, y0), (x1, y1)], outline="black", width=3)
 
-    if item['contentType'] == 'text':
-        text = item['content'] or item['name']
-        rect_width = x1 - x0
-        rect_height = y1 - y0
-        font = find_max_font_size(text, rect_width, rect_height, draw)
-        lines = wrap_text(text, rect_width, font, draw)
-        total_text_height = sum([font.size for line in lines])
-        current_y = y0 + (rect_height - total_text_height) / 2
+        if item['contentType'] == 'text':
+            text = item['content'] or item['name']
+            rect_width = x1 - x0
+            rect_height = y1 - y0
+            font = find_max_font_size(text, rect_width, rect_height, draw)
+            lines = wrap_text(text, rect_width, font, draw)
+            total_text_height = sum([font.size for line in lines])
+            current_y = y0 + (rect_height - total_text_height) / 2
 
-        for line in lines:
-            text_width = draw.textlength(line, font=font)
-            text_x = x0 + (rect_width - text_width) / 2
-            draw.text((text_x, current_y), line, fill="black", font=font)
-            current_y += font.size
-    else:
-        assert item['contentType'] == 'image'
-        data = item['content'].removeprefix("data:image/jpeg;base64,")
-        print(data[:5], data[-5:])
-        image = Image.open(BytesIO(base64.b64decode( data )))
-        image = image.resize((item['width'], item['height']))
-        canvas.paste(image, (item['x'], item['y']))
+            for line in lines:
+                text_width = draw.textlength(line, font=font)
+                text_x = x0 + (rect_width - text_width) / 2
+                draw.text((text_x, current_y), line, fill="black", font=font)
+                current_y += font.size
+        else:
+            assert item['contentType'] == 'image'
+            data = item['content'].removeprefix("data:image/jpeg;base64,")
+            print(data[:5], data[-5:])
+            image = Image.open(BytesIO(base64.b64decode( data )))
+            image = image.resize((item['width'], item['height']))
+            canvas.paste(image, (item['x'], item['y']))
 
+    return canvas
+    #canvas.show()
 
-canvas.show()
-canvas.save('canvas.png')
+if __name__ == '__main__':
+    if not os.path.exists('final.json'):
+        print("final.json does not exist. exiting.")
+        exit()
+    image = main("final.json")
+    img_str = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
+    print("generated image of b64 length", len(img_str))
