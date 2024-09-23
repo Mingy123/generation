@@ -21,6 +21,7 @@ import re
 import json
 import base64
 import time
+import requests
 from PIL import Image
 from io import BytesIO
 from diffusers import DiffusionPipeline
@@ -193,15 +194,18 @@ def main( \
     for item in template['elements']:
         if item['contentType'] == 'image': num_images += 1
 
-    files = pdf_to_img(resource_file)
-    runs = split_list(files, 10)
-    print("Split into", runs)
-    refs = []
-    for i in range(len(runs)):
-        r = runs[i]
-        result = get_image_info(r)
-        refs += result
-    information = "\n".join(refs)
+    if resource_file != None:
+        files = pdf_to_img(resource_file)
+        runs = split_list(files, 10)
+        print("Split into", runs)
+        refs = []
+        for i in range(len(runs)):
+            r = runs[i]
+            result = get_image_info(r)
+            refs += result
+        information = "\n".join(refs)
+    else:
+        information = "Nothing. Use your own information to generate content."
 
     content = ask_question(PRETEXT_CONTENT.format(", ".join(section_names), target_audience) + information)
 
@@ -278,14 +282,56 @@ def main( \
     final_image = draw.main(template)
     buf = BytesIO()
     final_image.save(buf, format="JPEG")
+    final_image.save('out.png')
     img_str = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
     template['renderedImage'] = img_str
 
-    outfile = open("final.json", "w")
-    json.dump(template, outfile)
-    outfile.close()
+    return template
 
-start = time.time()
-main(target_audience='young adults with plentiful exposure to drugs and drug abuse')
-end = time.time()
-print(end-start)
+#start = time.time()
+#main(target_audience='young adults with plentiful exposure to drugs and drug abuse', resource_file = None)
+#end = time.time()
+#print(end-start)
+
+
+
+if __name__ == '__main__':
+    # the real main loop
+    session = requests.Session()
+    host = 'https://hacx-wadio-api.blusteve.com'
+    cookies = {
+            'session': os.getenv("STEVE_SESSION"),
+            'session.sig': os.getenv("STEVE_SESSION_SIG")
+    }
+    session.cookies.update(cookies)
+
+    while True:
+        data = []
+        while len(data) == 0:
+            print("Requesting...")
+            response = session.get(host+'/todos')
+            data = response.json()
+            time.sleep(60)
+
+        for req in data:
+            param = req['input']
+            if param['reference'] == 'pdeInfo':
+                resource_file = "references/pdeInfo.pdf"
+            if param['reference'] == 'pdeParents':
+                resource_file = "references/pdeParents.pdf"
+            elif param['format'] != 'pdf' or not os.path.exists(f"references/{param['reference']}"):
+                # no reference file
+                resource_file = None
+            else:
+                resource_file = f"references/{param['reference']}"
+            audience = param['audience'] + ' ' + param['addInfo']
+            print("calling with", resource_file, "audience =", audience)
+            result = main(resource_file = resource_file, target_audience = audience)
+            id_num = req['input_id']
+            response = session.post(host+f"/upload/{id_num}", json=result)
+            data = response.text
+            print(f"POSTed #{id_num} with response", response.status_code, response.text)
+            outfile = open(f"out_{id_num}.json", "w")
+            json.dump(result, outfile)
+            outfile.close()
+            print("saved to", f"out_{id_num}.json")

@@ -5,8 +5,11 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 FONT_PATH = 'fonts/Segoe UI.ttf'
+MARGIN = 5 // 100
 
 def find_max_font_size(text, width, height, draw):
+    width *= 1-MARGIN
+    height *= 1-MARGIN
     font_size = 1
     font = ImageFont.truetype(FONT_PATH, font_size)
     while True:
