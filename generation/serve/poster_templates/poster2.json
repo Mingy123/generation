@@ -1,0 +1,60 @@
+{
+    "width": 1920,
+    "height": 1080,
+    "elements": [
+        {
+            "name": "Title",
+            "x": 40,
+            "y": 40,
+            "width": 1840,
+            "height": 160,
+            "contentType": "text",
+            "content": ""
+        },
+        {
+            "name": "Content 1 Image",
+            "x": 60,
+            "y": 240,
+            "width": 500,
+            "height": 360,
+            "contentType": "image",
+            "content": ""
+        },
+        {
+            "name": "Content 1",
+            "x": 600,
+            "y": 240,
+            "width": 320,
+            "height": 360,
+            "contentType": "text",
+            "content": ""
+        },
+        {
+            "name": "Content 1 Elaboration",
+            "x": 60,
+            "y": 650,
+            "width": 860,
+            "height": 390,
+            "contentType": "text",
+            "content": ""
+        },
+        {
+            "name": "Content 2 Image",
+            "x": 1000,
+            "y": 240,
+            "width": 830,
+            "height": 520,
+            "contentType": "image",
+            "content": ""
+        },
+        {
+            "name": "Content 2",
+            "x": 1000,
+            "y": 810,
+            "width": 830,
+            "height": 230,
+            "contentType": "text",
+            "content": ""
+        }
+    ]
+}
